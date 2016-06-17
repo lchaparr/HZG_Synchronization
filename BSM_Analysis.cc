@@ -55,12 +55,10 @@ BSM_Analysis::BSM_Analysis(TFile* theFile, TDirectory *cdDir[], int nDir, char* 
 		// TLorentz vector -------------------------------
 		TLorentzVector first_muon_vec(0., 0., 0., 0.);
 		TLorentzVector Subfirst_muon_vec(0., 0., 0., 0.);
-		TLorentzVector Iso_first_muon_vec(0., 0., 0., 0.);
-		TLorentzVector Iso_Subfirst_muon_vec(0., 0., 0., 0.);
 		TLorentzVector hzg_first_muon_vec(0., 0., 0., 0.);
 		TLorentzVector hzg_Subfirst_muon_vec(0., 0., 0., 0.);
 		TLorentzVector Photon_TL(0., 0., 0., 0.);
-		TLorentzVector Photon_sel_vec(0., 0., 0., 0.);
+		//TLorentzVector Photon_sel_vec(0., 0., 0., 0.);
 
 		double charge_lead = 0.;
 		double charge_slead = 0.;
@@ -116,15 +114,14 @@ BSM_Analysis::BSM_Analysis(TFile* theFile, TDirectory *cdDir[], int nDir, char* 
 		{
 			for (int m1 = 0; m1 < Muon_pt->size(); m1++)
 			{
+				MuonIso1 = (Muon_isoCharged->at(m1) + TMath::Max((double_t) 0.0 ,Muon_isoNeutralHadron->at(m1) + Muon_isoPhoton->at(m1) - (0.5*Muon_isoPU->at(m1)) ))/Muon_pt->at(m1);
 				if ((Muon_pt->size() > 1) && (Muon_pt->at(m1) > 20.0))
 				{														  
 					for (int m2 = 0; m2 < Muon_pt->size(); m2++)
 					{	
+						MuonIso2= (Muon_isoCharged->at(m2) + TMath::Max((double_t) 0.0 ,Muon_isoNeutralHadron->at(m2) + Muon_isoPhoton->at(m2) - (0.5*Muon_isoPU->at(m2)) ))/Muon_pt->at(m2);
 						if ((Muon_pt->size() > 1) && (Muon_pt->at(m2) >15.0))
-						{
-							MuonIso1= (Muon_isoCharged->at(m1) + TMath::Max((double_t) 0.0 ,Muon_isoNeutralHadron->at(m1) + Muon_isoPhoton->at(m1) - 0.5*Muon_isoPU->at(m1)))/Muon_pt->at(m1);	
-							MuonIso2= (Muon_isoCharged->at(m2) + TMath::Max((double_t) 0.0 ,Muon_isoNeutralHadron->at(m2) + Muon_isoPhoton->at(m2) - 0.5*Muon_isoPU->at(m2)))/Muon_pt->at(m2);	
-						
+						{ 				
 							if (Muon_charge->at(m1)*Muon_charge->at(m2) < 0)
 							{
 								first_muon_vec.SetPtEtaPhiE(Muon_pt->at(m1), Muon_eta->at(m1), Muon_phi->at(m1), Muon_energy->at(m1));
@@ -138,32 +135,31 @@ BSM_Analysis::BSM_Analysis(TFile* theFile, TDirectory *cdDir[], int nDir, char* 
 									dimuon_mass_int = dimuon_mass;
 								
 									pass_leptons_ptcut = true;	
-								}
-													
-								//================== isolation and Muon ID	
-														
-								if((MuonIso1 > 0.25) && (MuonIso2 >0.25) && (Muon_tight->at(m1)==1) && (Muon_tight->at(m2)==1) && (pass_leptons_ptcut))
-								{
-									Iso_first_muon_vec.SetPtEtaPhiE(Muon_pt->at(m1), Muon_eta->at(m1), Muon_phi->at(m1), Muon_energy->at(m1));
-									Iso_Subfirst_muon_vec.SetPtEtaPhiE(Muon_pt->at(m2), Muon_eta->at(m2), Muon_phi->at(m2), Muon_energy->at(m2));
-								
-									pass_iso_leptoncut = true;
 								}	
-							
-								if (pass_iso_leptoncut)
+					
+								if ((Muon_tight->at(m1)==1) && (Muon_tight->at(m2)==1) && (MuonIso1 < 0.25) && (MuonIso2 < 0.25))
 								{
-									float dimuon_M = (Iso_first_muon_vec + Iso_Subfirst_muon_vec).M();
-								
-									if (dimuon_M > 50.0)
-									{
-										pass_dilepton_mass = true;
-									}
+									pass_iso_leptoncut = true;
 								}
-							}		
-						}
-						pass_dalitz_id[0] = 1;					
-					}
-				}
+															
+							}	
+						}				
+						//================== isolation and Muon ID	
+					
+															
+							
+						if (pass_iso_leptoncut)
+						{
+							float dimuon_M = (first_muon_vec + Subfirst_muon_vec).M();
+								
+							if (dimuon_M > 50.0)
+							{
+								pass_dilepton_mass = true;
+							}
+						}														
+						pass_dalitz_id[0] = 1;		
+					}			
+				}			
 			}
 		}
 				
@@ -189,50 +185,33 @@ BSM_Analysis::BSM_Analysis(TFile* theFile, TDirectory *cdDir[], int nDir, char* 
 		
 		TLorentzVector Dilep_vec(0., 0., 0., 0.);		
 
-
-		
-		for(int ph = 0; ph < Photon_pt->size(); ph++)
+		if(pass_dilepton_mass)
 		{
-			if((Photon_pt->size()>1)&&(Photon_pt->at(ph)>15.0)&&(Photon_EleVeto->at(ph)== 1))
+			
+		
+		
+			for(int ph = 0; ph < Photon_pt->size(); ph++)
 			{
-				Photon_TL.SetPtEtaPhiE(Photon_pt->at(ph), Photon_eta->at(ph), Photon_phi->at(ph), Photon_energy->at(ph));	
-				Photon_vec.push_back(Photon_TL);
-				pass_photon_sel = true;
-			}
-			if(pass_dilepton_mass)
-			{
-				float Mll = (Iso_first_muon_vec + Iso_Subfirst_muon_vec).M();
-				float delta = (Iso_first_muon_vec + Iso_Subfirst_muon_vec).DeltaR(Photon_TL);
-				float Mllg = (Iso_first_muon_vec + Iso_Subfirst_muon_vec + Photon_TL).M();
+				if((Photon_pt->size()>1)&&(Photon_pt->at(ph)>15.0)&&(Photon_EleVeto->at(ph)== 1))
+				{
+					Photon_TL.SetPtEtaPhiE(Photon_pt->at(ph), Photon_eta->at(ph), Photon_phi->at(ph), Photon_energy->at(ph));	
+					Photon_vec.push_back(Photon_TL);
+					pass_photon_sel = true;
+				}
+			
+				float Mll = (first_muon_vec + Subfirst_muon_vec).M();
+				float delta = (first_muon_vec + Subfirst_muon_vec).DeltaR(Photon_TL);
+				float Mllg = (first_muon_vec + Subfirst_muon_vec + Photon_TL).M();
 			
 				float pt_cut1_mllg = (Photon_TL.Pt())/Mllg;
 			
 				if ((delta > 0.4) && (pt_cut1_mllg > 0.1363) && ((Mll + Mllg) >185.0))
 				{
 					pass_all = true;
-				}			
-			}			
+				}				
+			}		
 		}
-		
 
-
-		//three body mass // Delta R  --------------------------
-		
-	/*	if (pass_photon_sel && pass_dilepton_mass)
-		{
-			float Mll = (Iso_first_muon_vec + Iso_Subfirst_muon_vec).M();
-			float delta = (Iso_first_muon_vec + Iso_Subfirst_muon_vec).DeltaR(Photon_TL);
-			float Mllg = (Iso_first_muon_vec + Iso_Subfirst_muon_vec + Photon_TL).M();
-			
-			float pt_cut1_mllg = (Photon_TL.Pt())/Mllg;
-			
-			if ((delta > 0.4) && (pt_cut1_mllg > 0.1363) && ((Mll + Mllg) >185.0))
-			{
-				pass_all = true;
-			}
-			
-		}
-*/
 		if(pass_all)
 		{
 			photon_evt ++;
@@ -255,7 +234,9 @@ BSM_Analysis::BSM_Analysis(TFile* theFile, TDirectory *cdDir[], int nDir, char* 
 
 	cout<<"Events that pass the trigger:   "<<trigger_evt<<endl;
 	cout<<"Events that pass leptons pt cuts:    "<<leptons_ptcut_evt<<endl;
+
 	cout<<"Events that pass Iso lepton cuts:    "<<iso_leptoncut<<endl;
+
 	cout<<"Events that pass the dimuon selection:   "<<dimuon_evt<<endl;
 	cout<<"Events that pass all selections:    "<<photon_evt<<endl;
 
